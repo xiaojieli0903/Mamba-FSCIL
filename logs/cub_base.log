@@ -1,0 +1,425 @@
+2024-07-17 15:32:23,353 - mmcls - INFO - Environment info:
+------------------------------------------------------------
+sys.platform: linux
+Python: 3.10.14 | packaged by conda-forge | (main, Mar 20 2024, 12:45:18) [GCC 12.3.0]
+CUDA available: True
+GPU 0,1,2,3,4,5,6,7: NVIDIA A100-SXM4-40GB
+CUDA_HOME: /usr/local/cuda
+NVCC: Cuda compilation tools, release 12.2, V12.2.91
+GCC: gcc (Ubuntu 9.4.0-1ubuntu1~20.04.2) 9.4.0
+PyTorch: 1.12.1+cu113
+PyTorch compiling details: PyTorch built with:
+  - GCC 9.3
+  - C++ Version: 201402
+  - Intel(R) Math Kernel Library Version 2020.0.0 Product Build 20191122 for Intel(R) 64 architecture applications
+  - Intel(R) MKL-DNN v2.6.0 (Git Hash 52b5f107dd9cf10910aaa19cb47f3abf9b349815)
+  - OpenMP 201511 (a.k.a. OpenMP 4.5)
+  - LAPACK is enabled (usually provided by MKL)
+  - NNPACK is enabled
+  - CPU capability usage: AVX2
+  - CUDA Runtime 11.3
+  - NVCC architecture flags: -gencode;arch=compute_37,code=sm_37;-gencode;arch=compute_50,code=sm_50;-gencode;arch=compute_60,code=sm_60;-gencode;arch=compute_70,code=sm_70;-gencode;arch=compute_75,code=sm_75;-gencode;arch=compute_80,code=sm_80;-gencode;arch=compute_86,code=sm_86
+  - CuDNN 8.3.2  (built against CUDA 11.5)
+  - Magma 2.5.2
+  - Build settings: BLAS_INFO=mkl, BUILD_TYPE=Release, CUDA_VERSION=11.3, CUDNN_VERSION=8.3.2, CXX_COMPILER=/opt/rh/devtoolset-9/root/usr/bin/c++, CXX_FLAGS= -fabi-version=11 -Wno-deprecated -fvisibility-inlines-hidden -DUSE_PTHREADPOOL -fopenmp -DNDEBUG -DUSE_KINETO -DUSE_FBGEMM -DUSE_QNNPACK -DUSE_PYTORCH_QNNPACK -DUSE_XNNPACK -DSYMBOLICATE_MOBILE_DEBUG_HANDLE -DEDGE_PROFILER_USE_KINETO -O2 -fPIC -Wno-narrowing -Wall -Wextra -Werror=return-type -Wno-missing-field-initializers -Wno-type-limits -Wno-array-bounds -Wno-unknown-pragmas -Wno-unused-parameter -Wno-unused-function -Wno-unused-result -Wno-unused-local-typedefs -Wno-strict-overflow -Wno-strict-aliasing -Wno-error=deprecated-declarations -Wno-stringop-overflow -Wno-psabi -Wno-error=pedantic -Wno-error=redundant-decls -Wno-error=old-style-cast -fdiagnostics-color=always -faligned-new -Wno-unused-but-set-variable -Wno-maybe-uninitialized -fno-math-errno -fno-trapping-math -Werror=format -Werror=cast-function-type -Wno-stringop-overflow, LAPACK_INFO=mkl, PERF_WITH_AVX=1, PERF_WITH_AVX2=1, PERF_WITH_AVX512=1, TORCH_VERSION=1.12.1, USE_CUDA=ON, USE_CUDNN=ON, USE_EXCEPTION_PTR=1, USE_GFLAGS=OFF, USE_GLOG=OFF, USE_MKL=ON, USE_MKLDNN=OFF, USE_MPI=OFF, USE_NCCL=ON, USE_NNPACK=ON, USE_OPENMP=ON, USE_ROCM=OFF, 
+
+TorchVision: 0.13.1+cu113
+OpenCV: 4.9.0
+MMCV: 1.7.0
+MMCV Compiler: n/a
+MMCV CUDA Compiler: n/a
+MMClassification: 0.23.2_71ef7ba+dea05e1
+------------------------------------------------------------
+
+2024-07-17 15:32:23,354 - mmcls - INFO - Distributed training: True
+2024-07-17 15:32:23,502 - mmcls - INFO - Config:
+model = dict(
+    type='ImageClassifierCIL',
+    backbone=dict(
+        type='ResNet',
+        depth=18,
+        frozen_stages=1,
+        init_cfg=dict(type='Pretrained', checkpoint='torchvision://resnet18'),
+        norm_cfg=dict(type='SyncBN', requires_grad=True)),
+    neck=dict(
+        type='MambaNeck',
+        in_channels=512,
+        out_channels=1024,
+        version='ss2d',
+        feat_size=7,
+        num_layers=2,
+        use_residual_proj=True),
+    head=dict(
+        type='ETFHead',
+        num_classes=200,
+        eval_classes=100,
+        in_channels=1024,
+        loss=dict(type='DRLoss', loss_weight=10.0),
+        topk=(1, 5),
+        cal_acc=True,
+        with_len=False),
+    mixup=0,
+    mixup_prob=0)
+img_size = 224
+_img_resize_size = 256
+img_norm_cfg = dict(
+    mean=[123.675, 116.28, 103.53], std=[58.395, 57.12, 57.375], to_rgb=True)
+meta_keys = ('filename', 'ori_filename', 'ori_shape', 'img_shape', 'flip',
+             'flip_direction', 'img_norm_cfg', 'cls_id', 'img_id')
+train_pipeline = [
+    dict(type='LoadImageFromFile'),
+    dict(type='RandomResizedCrop', size=224),
+    dict(type='RandomFlip', flip_prob=0.5, direction='horizontal'),
+    dict(type='ColorJitter', brightness=0.3, contrast=0.3, saturation=0.3),
+    dict(
+        type='Normalize',
+        mean=[123.675, 116.28, 103.53],
+        std=[58.395, 57.12, 57.375],
+        to_rgb=True),
+    dict(type='ImageToTensor', keys=['img']),
+    dict(type='ToTensor', keys=['gt_label']),
+    dict(
+        type='Collect',
+        keys=['img', 'gt_label'],
+        meta_keys=('filename', 'ori_filename', 'ori_shape', 'img_shape',
+                   'flip', 'flip_direction', 'img_norm_cfg', 'cls_id',
+                   'img_id'))
+]
+test_pipeline = [
+    dict(type='LoadImageFromFile'),
+    dict(type='Resize', size=(256, -1)),
+    dict(type='CenterCrop', crop_size=224),
+    dict(
+        type='Normalize',
+        mean=[123.675, 116.28, 103.53],
+        std=[58.395, 57.12, 57.375],
+        to_rgb=True),
+    dict(type='ImageToTensor', keys=['img']),
+    dict(
+        type='Collect',
+        keys=['img', 'gt_label'],
+        meta_keys=('filename', 'ori_filename', 'ori_shape', 'img_shape',
+                   'flip', 'flip_direction', 'img_norm_cfg', 'cls_id',
+                   'img_id'))
+]
+data = dict(
+    samples_per_gpu=64,
+    workers_per_gpu=8,
+    train_dataloader=dict(persistent_workers=True),
+    val_dataloader=dict(persistent_workers=True),
+    test_dataloader=dict(persistent_workers=True),
+    train=dict(
+        type='RepeatDataset',
+        times=4,
+        dataset=dict(
+            type='CUBFSCILDataset',
+            data_prefix='./data/CUB_200_2011',
+            pipeline=[
+                dict(type='LoadImageFromFile'),
+                dict(type='RandomResizedCrop', size=224),
+                dict(type='RandomFlip', flip_prob=0.5, direction='horizontal'),
+                dict(
+                    type='ColorJitter',
+                    brightness=0.3,
+                    contrast=0.3,
+                    saturation=0.3),
+                dict(
+                    type='Normalize',
+                    mean=[123.675, 116.28, 103.53],
+                    std=[58.395, 57.12, 57.375],
+                    to_rgb=True),
+                dict(type='ImageToTensor', keys=['img']),
+                dict(type='ToTensor', keys=['gt_label']),
+                dict(
+                    type='Collect',
+                    keys=['img', 'gt_label'],
+                    meta_keys=('filename', 'ori_filename', 'ori_shape',
+                               'img_shape', 'flip', 'flip_direction',
+                               'img_norm_cfg', 'cls_id', 'img_id'))
+            ],
+            num_cls=100,
+            subset='train')),
+    val=dict(
+        type='CUBFSCILDataset',
+        data_prefix='./data/CUB_200_2011',
+        pipeline=[
+            dict(type='LoadImageFromFile'),
+            dict(type='Resize', size=(256, -1)),
+            dict(type='CenterCrop', crop_size=224),
+            dict(
+                type='Normalize',
+                mean=[123.675, 116.28, 103.53],
+                std=[58.395, 57.12, 57.375],
+                to_rgb=True),
+            dict(type='ImageToTensor', keys=['img']),
+            dict(
+                type='Collect',
+                keys=['img', 'gt_label'],
+                meta_keys=('filename', 'ori_filename', 'ori_shape',
+                           'img_shape', 'flip', 'flip_direction',
+                           'img_norm_cfg', 'cls_id', 'img_id'))
+        ],
+        num_cls=100,
+        subset='test'),
+    test=dict(
+        type='CUBFSCILDataset',
+        data_prefix='./data/CUB_200_2011',
+        pipeline=[
+            dict(type='LoadImageFromFile'),
+            dict(type='Resize', size=(256, -1)),
+            dict(type='CenterCrop', crop_size=224),
+            dict(
+                type='Normalize',
+                mean=[123.675, 116.28, 103.53],
+                std=[58.395, 57.12, 57.375],
+                to_rgb=True),
+            dict(type='ImageToTensor', keys=['img']),
+            dict(
+                type='Collect',
+                keys=['img', 'gt_label'],
+                meta_keys=('filename', 'ori_filename', 'ori_shape',
+                           'img_shape', 'flip', 'flip_direction',
+                           'img_norm_cfg', 'cls_id', 'img_id'))
+        ],
+        num_cls=200,
+        subset='test'))
+optimizer = dict(
+    type='SGD',
+    lr=0.2,
+    momentum=0.9,
+    weight_decay=0.0005,
+    paramwise_cfg=dict(custom_keys=dict(backbone=dict(lr_mult=0.1))))
+optimizer_config = dict(grad_clip=None)
+lr_config = dict(
+    policy='CosineAnnealingCooldown',
+    min_lr=None,
+    min_lr_ratio=0.1,
+    cool_down_ratio=0.1,
+    cool_down_time=10,
+    by_epoch=False,
+    warmup='linear',
+    warmup_iters=100,
+    warmup_ratio=0.1,
+    warmup_by_epoch=False)
+runner = dict(type='EpochBasedRunner', max_epochs=20)
+checkpoint_config = dict(interval=1, max_keep_ckpts=2)
+evaluation = dict(interval=1, save_best='auto')
+log_config = dict(interval=10, hooks=[dict(type='TextLoggerHook')])
+dist_params = dict(backend='nccl')
+log_level = 'INFO'
+workflow = [('train', 1)]
+load_from = None
+resume_from = None
+mean_neck_feat = True
+mean_cur_feat = False
+feat_test = False
+grad_clip = None
+finetune_lr = 0.1
+inc_start = 100
+inc_end = 200
+inc_step = 10
+copy_list = (1, 1, 1, 1, 1, 1, 1, 1, 1, 1)
+step_list = (50, 50, 50, 50, 50, 50, 50, 50, 50, 50)
+base_copy_list = (1, 1, 1, 1, 1, 1, 1, 1, 1, 1)
+vis_tsne = False
+vis_tsne_norm = False
+vis_tsne_type = 'all'
+vis_structure = False
+work_dir = 'work_dirs/mamba_fscil/resnet18_etf_bs512_80e_cub_mambafscil'
+gpu_ids = range(0, 8)
+
+2024-07-17 15:32:23,503 - mmcls - INFO - Set random seed to 0, deterministic: True
+2024-07-17 15:32:23,634 - mmcls - INFO - ETF head : evaluating 100 out of 200 classes.
+2024-07-17 15:32:23,634 - mmcls - INFO - ETF head : with_len : False
+2024-07-17 15:32:33,148 - mmcls - INFO - Start running, host: lixiaojie@user-NF5468M6, work_dir: ./work_dirs/mamba_fscil/resnet18_etf_bs512_80e_cub_mambafscil
+2024-07-17 15:32:33,149 - mmcls - INFO - Hooks will be executed in the following order:
+before_run:
+(VERY_HIGH   ) CosineAnnealingCooldownLrUpdaterHook
+(NORMAL      ) CheckpointHook                     
+(LOW         ) DistEvalHook                       
+(VERY_LOW    ) TextLoggerHook                     
+ -------------------- 
+before_train_epoch:
+(VERY_HIGH   ) CosineAnnealingCooldownLrUpdaterHook
+(NORMAL      ) DistSamplerSeedHook                
+(LOW         ) IterTimerHook                      
+(LOW         ) DistEvalHook                       
+(VERY_LOW    ) TextLoggerHook                     
+ -------------------- 
+before_train_iter:
+(VERY_HIGH   ) CosineAnnealingCooldownLrUpdaterHook
+(LOW         ) IterTimerHook                      
+(LOW         ) DistEvalHook                       
+ -------------------- 
+after_train_iter:
+(ABOVE_NORMAL) DistOptimizerHook                  
+(NORMAL      ) CheckpointHook                     
+(LOW         ) IterTimerHook                      
+(LOW         ) DistEvalHook                       
+(VERY_LOW    ) TextLoggerHook                     
+ -------------------- 
+after_train_epoch:
+(NORMAL      ) CheckpointHook                     
+(LOW         ) DistEvalHook                       
+(VERY_LOW    ) TextLoggerHook                     
+ -------------------- 
+before_val_epoch:
+(NORMAL      ) DistSamplerSeedHook                
+(LOW         ) IterTimerHook                      
+(VERY_LOW    ) TextLoggerHook                     
+ -------------------- 
+before_val_iter:
+(LOW         ) IterTimerHook                      
+ -------------------- 
+after_val_iter:
+(LOW         ) IterTimerHook                      
+ -------------------- 
+after_val_epoch:
+(VERY_LOW    ) TextLoggerHook                     
+ -------------------- 
+after_run:
+(VERY_LOW    ) TextLoggerHook                     
+ -------------------- 
+2024-07-17 15:32:33,149 - mmcls - INFO - workflow: [('train', 1)], max: 20 epochs
+2024-07-17 15:32:33,149 - mmcls - INFO - Checkpoints will be saved to ./work_dirs/mamba_fscil/resnet18_etf_bs512_80e_cub_mambafscil by HardDiskBackend.
+2024-07-17 15:32:53,540 - mmcls - INFO - Epoch [1][10/24]	lr: 3.617e-02, eta: 0:15:45, time: 2.011, data_time: 0.432, memory: 1852, loss: 4.7982, top-1: 1.4453, top-5: 6.4062, norm_input_base: 175.8914, norm_input_novel: 0.0000, norm_main_base: 428.2272, norm_main_novel: 0.0000, norm_residual_base: 173.6754, norm_residual_novel: 0.0000, norm_dts_base: 123.3802, norm_dts_novel: 0.0000, norm_Bs_base: 121.5711, norm_Bs_novel: 0.0000, norm_Cs_base: 121.8395, norm_Cs_novel: 0.0000
+2024-07-17 15:33:00,377 - mmcls - INFO - Epoch [1][20/24]	lr: 5.400e-02, eta: 0:10:18, time: 0.678, data_time: 0.028, memory: 1852, loss: 4.2582, top-1: 9.2578, top-5: 27.6172, norm_input_base: 261.8099, norm_input_novel: 0.0000, norm_main_base: 540.7965, norm_main_novel: 0.0000, norm_residual_base: 246.6977, norm_residual_novel: 0.0000, norm_dts_base: 130.2766, norm_dts_novel: 0.0000, norm_Bs_base: 128.1547, norm_Bs_novel: 0.0000, norm_Cs_base: 126.8188, norm_Cs_novel: 0.0000
+2024-07-17 15:33:02,504 - mmcls - INFO - Saving checkpoint at 1 epochs
+2024-07-17 15:33:06,488 - mmcls - INFO - Dist Eval Hook : There are 2864 samples in total.
+2024-07-17 15:33:06,822 - mmcls - INFO - Now best checkpoint is saved as best_acc_epoch_1.pth.
+2024-07-17 15:33:06,822 - mmcls - INFO - Best acc is 31.6690 at 1 epoch.
+2024-07-17 15:33:06,823 - mmcls - INFO - Epoch(val) [1][6]	acc: 31.6690
+2024-07-17 15:33:16,905 - mmcls - INFO - Epoch [2][10/24]	lr: 7.853e-02, eta: 0:08:01, time: 0.977, data_time: 0.298, memory: 1852, loss: 3.9501, top-1: 31.6602, top-5: 67.2266, norm_input_base: 360.5941, norm_input_novel: 0.0000, norm_main_base: 674.9069, norm_main_novel: 0.0000, norm_residual_base: 342.1108, norm_residual_novel: 0.0000, norm_dts_base: 134.0209, norm_dts_novel: 0.0000, norm_Bs_base: 132.9727, norm_Bs_novel: 0.0000, norm_Cs_base: 133.9835, norm_Cs_novel: 0.0000
+2024-07-17 15:33:23,853 - mmcls - INFO - Epoch [2][20/24]	lr: 9.560e-02, eta: 0:07:11, time: 0.683, data_time: 0.031, memory: 1852, loss: 3.5985, top-1: 41.9727, top-5: 73.9648, norm_input_base: 292.0612, norm_input_novel: 0.0000, norm_main_base: 678.1214, norm_main_novel: 0.0000, norm_residual_base: 283.2960, norm_residual_novel: 0.0000, norm_dts_base: 129.8471, norm_dts_novel: 0.0000, norm_Bs_base: 129.5523, norm_Bs_novel: 0.0000, norm_Cs_base: 131.9434, norm_Cs_novel: 0.0000
+2024-07-17 15:33:26,402 - mmcls - INFO - Saving checkpoint at 2 epochs
+2024-07-17 15:33:29,984 - mmcls - INFO - Dist Eval Hook : There are 2864 samples in total.
+2024-07-17 15:33:29,997 - mmcls - INFO - The previous best checkpoint work_dirs/mamba_fscil/cub_resnet18_mambafscil/best_acc_epoch_1.pth was removed
+2024-07-17 15:33:30,287 - mmcls - INFO - Now best checkpoint is saved as best_acc_epoch_2.pth.
+2024-07-17 15:33:30,287 - mmcls - INFO - Best acc is 54.3994 at 2 epoch.
+2024-07-17 15:33:30,287 - mmcls - INFO - Epoch(val) [2][6]	acc: 54.3994
+2024-07-17 15:33:41,216 - mmcls - INFO - Epoch [3][10/24]	lr: 1.186e-01, eta: 0:06:33, time: 1.054, data_time: 0.301, memory: 1852, loss: 2.9201, top-1: 52.5586, top-5: 82.6367, norm_input_base: 196.4522, norm_input_novel: 0.0000, norm_main_base: 656.5327, norm_main_novel: 0.0000, norm_residual_base: 190.2790, norm_residual_novel: 0.0000, norm_dts_base: 134.0175, norm_dts_novel: 0.0000, norm_Bs_base: 134.7599, norm_Bs_novel: 0.0000, norm_Cs_base: 136.0483, norm_Cs_novel: 0.0000
+2024-07-17 15:33:48,305 - mmcls - INFO - Epoch [3][20/24]	lr: 1.344e-01, eta: 0:06:10, time: 0.715, data_time: 0.040, memory: 1852, loss: 2.5765, top-1: 57.0312, top-5: 86.4062, norm_input_base: 207.9117, norm_input_novel: 0.0000, norm_main_base: 611.1073, norm_main_novel: 0.0000, norm_residual_base: 198.8211, norm_residual_novel: 0.0000, norm_dts_base: 126.6785, norm_dts_novel: 0.0000, norm_Bs_base: 127.6485, norm_Bs_novel: 0.0000, norm_Cs_base: 127.8065, norm_Cs_novel: 0.0000
+2024-07-17 15:33:50,687 - mmcls - INFO - Saving checkpoint at 3 epochs
+2024-07-17 15:33:54,270 - mmcls - INFO - Dist Eval Hook : There are 2864 samples in total.
+2024-07-17 15:33:54,286 - mmcls - INFO - The previous best checkpoint work_dirs/mamba_fscil/cub_resnet18_mambafscil/best_acc_epoch_2.pth was removed
+2024-07-17 15:33:54,581 - mmcls - INFO - Now best checkpoint is saved as best_acc_epoch_3.pth.
+2024-07-17 15:33:54,581 - mmcls - INFO - Best acc is 67.1788 at 3 epoch.
+2024-07-17 15:33:54,581 - mmcls - INFO - Epoch(val) [3][6]	acc: 67.1788
+2024-07-17 15:34:04,961 - mmcls - INFO - Epoch [4][10/24]	lr: 1.551e-01, eta: 0:05:45, time: 1.008, data_time: 0.299, memory: 1852, loss: 2.2272, top-1: 64.6484, top-5: 90.0977, norm_input_base: 209.4503, norm_input_novel: 0.0000, norm_main_base: 643.7441, norm_main_novel: 0.0000, norm_residual_base: 198.7844, norm_residual_novel: 0.0000, norm_dts_base: 120.6103, norm_dts_novel: 0.0000, norm_Bs_base: 120.1995, norm_Bs_novel: 0.0000, norm_Cs_base: 121.3756, norm_Cs_novel: 0.0000
+2024-07-17 15:34:12,096 - mmcls - INFO - Epoch [4][20/24]	lr: 1.690e-01, eta: 0:05:30, time: 0.706, data_time: 0.030, memory: 1852, loss: 2.0574, top-1: 68.5156, top-5: 90.9180, norm_input_base: 207.2899, norm_input_novel: 0.0000, norm_main_base: 667.8282, norm_main_novel: 0.0000, norm_residual_base: 196.3124, norm_residual_novel: 0.0000, norm_dts_base: 117.9627, norm_dts_novel: 0.0000, norm_Bs_base: 117.0514, norm_Bs_novel: 0.0000, norm_Cs_base: 118.3174, norm_Cs_novel: 0.0000
+2024-07-17 15:34:14,650 - mmcls - INFO - Saving checkpoint at 4 epochs
+2024-07-17 15:34:18,319 - mmcls - INFO - Dist Eval Hook : There are 2864 samples in total.
+2024-07-17 15:34:18,334 - mmcls - INFO - The previous best checkpoint work_dirs/mamba_fscil/cub_resnet18_mambafscil/best_acc_epoch_3.pth was removed
+2024-07-17 15:34:18,623 - mmcls - INFO - Now best checkpoint is saved as best_acc_epoch_4.pth.
+2024-07-17 15:34:18,623 - mmcls - INFO - Best acc is 72.4162 at 4 epoch.
+2024-07-17 15:34:18,623 - mmcls - INFO - Epoch(val) [4][6]	acc: 72.4162
+2024-07-17 15:34:29,528 - mmcls - INFO - Epoch [5][10/24]	lr: 1.787e-01, eta: 0:05:13, time: 1.057, data_time: 0.334, memory: 1852, loss: 1.8561, top-1: 72.1289, top-5: 92.5586, norm_input_base: 201.7410, norm_input_novel: 0.0000, norm_main_base: 678.1278, norm_main_novel: 0.0000, norm_residual_base: 190.5988, norm_residual_novel: 0.0000, norm_dts_base: 112.9510, norm_dts_novel: 0.0000, norm_Bs_base: 111.7259, norm_Bs_novel: 0.0000, norm_Cs_base: 113.4943, norm_Cs_novel: 0.0000
+2024-07-17 15:34:36,401 - mmcls - INFO - Epoch [5][20/24]	lr: 1.747e-01, eta: 0:05:00, time: 0.682, data_time: 0.034, memory: 1852, loss: 1.7518, top-1: 73.5938, top-5: 92.2656, norm_input_base: 196.9408, norm_input_novel: 0.0000, norm_main_base: 692.1500, norm_main_novel: 0.0000, norm_residual_base: 185.6278, norm_residual_novel: 0.0000, norm_dts_base: 110.0417, norm_dts_novel: 0.0000, norm_Bs_base: 108.2001, norm_Bs_novel: 0.0000, norm_Cs_base: 110.3715, norm_Cs_novel: 0.0000
+2024-07-17 15:34:38,781 - mmcls - INFO - Saving checkpoint at 5 epochs
+2024-07-17 15:34:42,285 - mmcls - INFO - Dist Eval Hook : There are 2864 samples in total.
+2024-07-17 15:34:42,300 - mmcls - INFO - The previous best checkpoint work_dirs/mamba_fscil/cub_resnet18_mambafscil/best_acc_epoch_4.pth was removed
+2024-07-17 15:34:42,588 - mmcls - INFO - Now best checkpoint is saved as best_acc_epoch_5.pth.
+2024-07-17 15:34:42,588 - mmcls - INFO - Best acc is 74.6508 at 5 epoch.
+2024-07-17 15:34:42,588 - mmcls - INFO - Epoch(val) [5][6]	acc: 74.6508
+2024-07-17 15:34:53,313 - mmcls - INFO - Epoch [6][10/24]	lr: 1.686e-01, eta: 0:04:45, time: 1.031, data_time: 0.324, memory: 1852, loss: 1.5807, top-1: 76.6211, top-5: 93.3398, norm_input_base: 190.4528, norm_input_novel: 0.0000, norm_main_base: 730.0217, norm_main_novel: 0.0000, norm_residual_base: 179.3684, norm_residual_novel: 0.0000, norm_dts_base: 106.4801, norm_dts_novel: 0.0000, norm_Bs_base: 104.7209, norm_Bs_novel: 0.0000, norm_Cs_base: 106.4251, norm_Cs_novel: 0.0000
+2024-07-17 15:35:00,492 - mmcls - INFO - Epoch [6][20/24]	lr: 1.639e-01, eta: 0:04:35, time: 0.730, data_time: 0.042, memory: 1852, loss: 1.5187, top-1: 76.1914, top-5: 93.5742, norm_input_base: 186.6471, norm_input_novel: 0.0000, norm_main_base: 750.6515, norm_main_novel: 0.0000, norm_residual_base: 175.2181, norm_residual_novel: 0.0000, norm_dts_base: 104.0586, norm_dts_novel: 0.0000, norm_Bs_base: 102.5682, norm_Bs_novel: 0.0000, norm_Cs_base: 104.2244, norm_Cs_novel: 0.0000
+2024-07-17 15:35:03,097 - mmcls - INFO - Saving checkpoint at 6 epochs
+2024-07-17 15:35:06,646 - mmcls - INFO - Dist Eval Hook : There are 2864 samples in total.
+2024-07-17 15:35:06,661 - mmcls - INFO - The previous best checkpoint work_dirs/mamba_fscil/cub_resnet18_mambafscil/best_acc_epoch_5.pth was removed
+2024-07-17 15:35:06,981 - mmcls - INFO - Now best checkpoint is saved as best_acc_epoch_6.pth.
+2024-07-17 15:35:06,981 - mmcls - INFO - Best acc is 77.2696 at 6 epoch.
+2024-07-17 15:35:06,981 - mmcls - INFO - Epoch(val) [6][6]	acc: 77.2696
+2024-07-17 15:35:17,035 - mmcls - INFO - Epoch [7][10/24]	lr: 1.569e-01, eta: 0:04:20, time: 0.973, data_time: 0.276, memory: 1852, loss: 1.3869, top-1: 79.2969, top-5: 94.2969, norm_input_base: 182.2397, norm_input_novel: 0.0000, norm_main_base: 771.1583, norm_main_novel: 0.0000, norm_residual_base: 170.6527, norm_residual_novel: 0.0000, norm_dts_base: 100.8205, norm_dts_novel: 0.0000, norm_Bs_base: 99.3880, norm_Bs_novel: 0.0000, norm_Cs_base: 100.9547, norm_Cs_novel: 0.0000
+2024-07-17 15:35:23,487 - mmcls - INFO - Epoch [7][20/24]	lr: 1.517e-01, eta: 0:04:09, time: 0.643, data_time: 0.032, memory: 1852, loss: 1.3271, top-1: 79.2578, top-5: 94.3164, norm_input_base: 178.2961, norm_input_novel: 0.0000, norm_main_base: 774.7158, norm_main_novel: 0.0000, norm_residual_base: 166.7379, norm_residual_novel: 0.0000, norm_dts_base: 98.8597, norm_dts_novel: 0.0000, norm_Bs_base: 97.1492, norm_Bs_novel: 0.0000, norm_Cs_base: 98.7958, norm_Cs_novel: 0.0000
+2024-07-17 15:35:25,794 - mmcls - INFO - Saving checkpoint at 7 epochs
+2024-07-17 15:35:29,285 - mmcls - INFO - Dist Eval Hook : There are 2864 samples in total.
+2024-07-17 15:35:29,300 - mmcls - INFO - The previous best checkpoint work_dirs/mamba_fscil/cub_resnet18_mambafscil/best_acc_epoch_6.pth was removed
+2024-07-17 15:35:29,595 - mmcls - INFO - Now best checkpoint is saved as best_acc_epoch_7.pth.
+2024-07-17 15:35:29,595 - mmcls - INFO - Best acc is 78.0377 at 7 epoch.
+2024-07-17 15:35:29,595 - mmcls - INFO - Epoch(val) [7][6]	acc: 78.0377
+2024-07-17 15:35:39,860 - mmcls - INFO - Epoch [8][10/24]	lr: 1.440e-01, eta: 0:03:56, time: 0.992, data_time: 0.315, memory: 1852, loss: 1.2426, top-1: 81.5820, top-5: 95.0000, norm_input_base: 174.2068, norm_input_novel: 0.0000, norm_main_base: 807.4157, norm_main_novel: 0.0000, norm_residual_base: 162.3811, norm_residual_novel: 0.0000, norm_dts_base: 96.1874, norm_dts_novel: 0.0000, norm_Bs_base: 94.4533, norm_Bs_novel: 0.0000, norm_Cs_base: 96.3738, norm_Cs_novel: 0.0000
+2024-07-17 15:35:45,815 - mmcls - INFO - Epoch [8][20/24]	lr: 1.384e-01, eta: 0:03:45, time: 0.598, data_time: 0.035, memory: 1852, loss: 1.1704, top-1: 82.1289, top-5: 95.1758, norm_input_base: 171.0394, norm_input_novel: 0.0000, norm_main_base: 816.1458, norm_main_novel: 0.0000, norm_residual_base: 159.3648, norm_residual_novel: 0.0000, norm_dts_base: 93.9121, norm_dts_novel: 0.0000, norm_Bs_base: 92.5164, norm_Bs_novel: 0.0000, norm_Cs_base: 94.0566, norm_Cs_novel: 0.0000
+2024-07-17 15:35:48,265 - mmcls - INFO - Saving checkpoint at 8 epochs
+2024-07-17 15:35:51,851 - mmcls - INFO - Dist Eval Hook : There are 2864 samples in total.
+2024-07-17 15:35:51,867 - mmcls - INFO - The previous best checkpoint work_dirs/mamba_fscil/cub_resnet18_mambafscil/best_acc_epoch_7.pth was removed
+2024-07-17 15:35:52,173 - mmcls - INFO - Now best checkpoint is saved as best_acc_epoch_8.pth.
+2024-07-17 15:35:52,173 - mmcls - INFO - Best acc is 78.8757 at 8 epoch.
+2024-07-17 15:35:52,173 - mmcls - INFO - Epoch(val) [8][6]	acc: 78.8757
+2024-07-17 15:36:01,974 - mmcls - INFO - Epoch [9][10/24]	lr: 1.303e-01, eta: 0:03:33, time: 0.946, data_time: 0.314, memory: 1852, loss: 1.0967, top-1: 83.4961, top-5: 95.5469, norm_input_base: 168.2381, norm_input_novel: 0.0000, norm_main_base: 828.4568, norm_main_novel: 0.0000, norm_residual_base: 156.2734, norm_residual_novel: 0.0000, norm_dts_base: 91.4891, norm_dts_novel: 0.0000, norm_Bs_base: 90.1083, norm_Bs_novel: 0.0000, norm_Cs_base: 91.7041, norm_Cs_novel: 0.0000
+2024-07-17 15:36:09,316 - mmcls - INFO - Epoch [9][20/24]	lr: 1.244e-01, eta: 0:03:25, time: 0.737, data_time: 0.034, memory: 1852, loss: 1.0852, top-1: 82.7930, top-5: 95.2344, norm_input_base: 164.8339, norm_input_novel: 0.0000, norm_main_base: 841.6642, norm_main_novel: 0.0000, norm_residual_base: 153.1500, norm_residual_novel: 0.0000, norm_dts_base: 89.5830, norm_dts_novel: 0.0000, norm_Bs_base: 88.1639, norm_Bs_novel: 0.0000, norm_Cs_base: 89.7349, norm_Cs_novel: 0.0000
+2024-07-17 15:36:11,537 - mmcls - INFO - Saving checkpoint at 9 epochs
+2024-07-17 15:36:15,108 - mmcls - INFO - Dist Eval Hook : There are 2864 samples in total.
+2024-07-17 15:36:15,126 - mmcls - INFO - The previous best checkpoint work_dirs/mamba_fscil/cub_resnet18_mambafscil/best_acc_epoch_8.pth was removed
+2024-07-17 15:36:15,424 - mmcls - INFO - Now best checkpoint is saved as best_acc_epoch_9.pth.
+2024-07-17 15:36:15,424 - mmcls - INFO - Best acc is 79.0852 at 9 epoch.
+2024-07-17 15:36:15,424 - mmcls - INFO - Epoch(val) [9][6]	acc: 79.0852
+2024-07-17 15:36:26,602 - mmcls - INFO - Epoch [10][10/24]	lr: 1.160e-01, eta: 0:03:14, time: 1.076, data_time: 0.328, memory: 1852, loss: 1.0097, top-1: 83.6914, top-5: 96.0742, norm_input_base: 163.1241, norm_input_novel: 0.0000, norm_main_base: 855.6205, norm_main_novel: 0.0000, norm_residual_base: 151.2941, norm_residual_novel: 0.0000, norm_dts_base: 87.2733, norm_dts_novel: 0.0000, norm_Bs_base: 86.0874, norm_Bs_novel: 0.0000, norm_Cs_base: 87.5082, norm_Cs_novel: 0.0000
+2024-07-17 15:36:33,833 - mmcls - INFO - Epoch [10][20/24]	lr: 1.100e-01, eta: 0:03:06, time: 0.730, data_time: 0.042, memory: 1852, loss: 0.9960, top-1: 83.9062, top-5: 95.4102, norm_input_base: 160.2719, norm_input_novel: 0.0000, norm_main_base: 857.7724, norm_main_novel: 0.0000, norm_residual_base: 148.6565, norm_residual_novel: 0.0000, norm_dts_base: 85.7024, norm_dts_novel: 0.0000, norm_Bs_base: 84.3708, norm_Bs_novel: 0.0000, norm_Cs_base: 85.8117, norm_Cs_novel: 0.0000
+2024-07-17 15:36:36,067 - mmcls - INFO - Saving checkpoint at 10 epochs
+2024-07-17 15:36:39,584 - mmcls - INFO - Dist Eval Hook : There are 2864 samples in total.
+2024-07-17 15:36:39,585 - mmcls - INFO - Epoch(val) [10][6]	acc: 78.9106
+2024-07-17 15:36:50,596 - mmcls - INFO - Epoch [11][10/24]	lr: 1.016e-01, eta: 0:02:55, time: 1.064, data_time: 0.317, memory: 1852, loss: 0.9469, top-1: 85.0000, top-5: 95.6641, norm_input_base: 157.5621, norm_input_novel: 0.0000, norm_main_base: 870.7672, norm_main_novel: 0.0000, norm_residual_base: 145.9026, norm_residual_novel: 0.0000, norm_dts_base: 83.5561, norm_dts_novel: 0.0000, norm_Bs_base: 82.5304, norm_Bs_novel: 0.0000, norm_Cs_base: 83.8803, norm_Cs_novel: 0.0000
+2024-07-17 15:36:56,625 - mmcls - INFO - Epoch [11][20/24]	lr: 9.562e-02, eta: 0:02:46, time: 0.604, data_time: 0.037, memory: 1852, loss: 0.9225, top-1: 85.3711, top-5: 95.8789, norm_input_base: 156.4528, norm_input_novel: 0.0000, norm_main_base: 878.0730, norm_main_novel: 0.0000, norm_residual_base: 144.8019, norm_residual_novel: 0.0000, norm_dts_base: 82.1268, norm_dts_novel: 0.0000, norm_Bs_base: 80.9359, norm_Bs_novel: 0.0000, norm_Cs_base: 82.3262, norm_Cs_novel: 0.0000
+2024-07-17 15:36:59,153 - mmcls - INFO - Saving checkpoint at 11 epochs
+2024-07-17 15:37:02,692 - mmcls - INFO - Dist Eval Hook : There are 2864 samples in total.
+2024-07-17 15:37:02,710 - mmcls - INFO - The previous best checkpoint work_dirs/mamba_fscil/cub_resnet18_mambafscil/best_acc_epoch_9.pth was removed
+2024-07-17 15:37:03,012 - mmcls - INFO - Now best checkpoint is saved as best_acc_epoch_11.pth.
+2024-07-17 15:37:03,012 - mmcls - INFO - Best acc is 79.7835 at 11 epoch.
+2024-07-17 15:37:03,013 - mmcls - INFO - Epoch(val) [11][6]	acc: 79.7835
+2024-07-17 15:37:13,450 - mmcls - INFO - Epoch [12][10/24]	lr: 8.738e-02, eta: 0:02:35, time: 1.008, data_time: 0.294, memory: 1852, loss: 0.9000, top-1: 85.4492, top-5: 95.7422, norm_input_base: 154.4174, norm_input_novel: 0.0000, norm_main_base: 897.2482, norm_main_novel: 0.0000, norm_residual_base: 142.5604, norm_residual_novel: 0.0000, norm_dts_base: 80.3461, norm_dts_novel: 0.0000, norm_Bs_base: 79.1933, norm_Bs_novel: 0.0000, norm_Cs_base: 80.5357, norm_Cs_novel: 0.0000
+2024-07-17 15:37:20,036 - mmcls - INFO - Epoch [12][20/24]	lr: 8.162e-02, eta: 0:02:27, time: 0.669, data_time: 0.036, memory: 1852, loss: 0.8901, top-1: 85.1172, top-5: 95.7422, norm_input_base: 153.0459, norm_input_novel: 0.0000, norm_main_base: 888.7187, norm_main_novel: 0.0000, norm_residual_base: 141.3934, norm_residual_novel: 0.0000, norm_dts_base: 79.1802, norm_dts_novel: 0.0000, norm_Bs_base: 78.0451, norm_Bs_novel: 0.0000, norm_Cs_base: 79.4761, norm_Cs_novel: 0.0000
+2024-07-17 15:37:22,212 - mmcls - INFO - Saving checkpoint at 12 epochs
+2024-07-17 15:37:25,620 - mmcls - INFO - Dist Eval Hook : There are 2864 samples in total.
+2024-07-17 15:37:25,621 - mmcls - INFO - Epoch(val) [12][6]	acc: 79.4344
+2024-07-17 15:37:35,272 - mmcls - INFO - Epoch [13][10/24]	lr: 7.376e-02, eta: 0:02:16, time: 0.927, data_time: 0.284, memory: 1852, loss: 0.8552, top-1: 85.7031, top-5: 95.9766, norm_input_base: 150.5336, norm_input_novel: 0.0000, norm_main_base: 901.3679, norm_main_novel: 0.0000, norm_residual_base: 138.7758, norm_residual_novel: 0.0000, norm_dts_base: 77.6665, norm_dts_novel: 0.0000, norm_Bs_base: 76.6236, norm_Bs_novel: 0.0000, norm_Cs_base: 78.0006, norm_Cs_novel: 0.0000
+2024-07-17 15:37:41,272 - mmcls - INFO - Epoch [13][20/24]	lr: 6.834e-02, eta: 0:02:07, time: 0.610, data_time: 0.039, memory: 1852, loss: 0.8515, top-1: 85.2734, top-5: 95.9570, norm_input_base: 150.1998, norm_input_novel: 0.0000, norm_main_base: 900.3167, norm_main_novel: 0.0000, norm_residual_base: 138.7412, norm_residual_novel: 0.0000, norm_dts_base: 76.5531, norm_dts_novel: 0.0000, norm_Bs_base: 75.5239, norm_Bs_novel: 0.0000, norm_Cs_base: 76.9465, norm_Cs_novel: 0.0000
+2024-07-17 15:37:43,375 - mmcls - INFO - Saving checkpoint at 13 epochs
+2024-07-17 15:37:46,890 - mmcls - INFO - Dist Eval Hook : There are 2864 samples in total.
+2024-07-17 15:37:46,906 - mmcls - INFO - The previous best checkpoint work_dirs/mamba_fscil/cub_resnet18_mambafscil/best_acc_epoch_11.pth was removed
+2024-07-17 15:37:47,214 - mmcls - INFO - Now best checkpoint is saved as best_acc_epoch_13.pth.
+2024-07-17 15:37:47,214 - mmcls - INFO - Best acc is 80.1327 at 13 epoch.
+2024-07-17 15:37:47,214 - mmcls - INFO - Epoch(val) [13][6]	acc: 80.1327
+2024-07-17 15:37:57,595 - mmcls - INFO - Epoch [14][10/24]	lr: 6.107e-02, eta: 0:01:57, time: 1.007, data_time: 0.342, memory: 1852, loss: 0.7917, top-1: 86.7969, top-5: 96.6602, norm_input_base: 148.6617, norm_input_novel: 0.0000, norm_main_base: 908.3743, norm_main_novel: 0.0000, norm_residual_base: 137.1685, norm_residual_novel: 0.0000, norm_dts_base: 75.4440, norm_dts_novel: 0.0000, norm_Bs_base: 74.4495, norm_Bs_novel: 0.0000, norm_Cs_base: 75.7981, norm_Cs_novel: 0.0000
+2024-07-17 15:38:04,007 - mmcls - INFO - Epoch [14][20/24]	lr: 5.613e-02, eta: 0:01:49, time: 0.649, data_time: 0.032, memory: 1852, loss: 0.8367, top-1: 85.7617, top-5: 95.7617, norm_input_base: 147.7505, norm_input_novel: 0.0000, norm_main_base: 916.6470, norm_main_novel: 0.0000, norm_residual_base: 136.0887, norm_residual_novel: 0.0000, norm_dts_base: 74.5010, norm_dts_novel: 0.0000, norm_Bs_base: 73.5915, norm_Bs_novel: 0.0000, norm_Cs_base: 74.8636, norm_Cs_novel: 0.0000
+2024-07-17 15:38:06,408 - mmcls - INFO - Saving checkpoint at 14 epochs
+2024-07-17 15:38:10,000 - mmcls - INFO - Dist Eval Hook : There are 2864 samples in total.
+2024-07-17 15:38:10,018 - mmcls - INFO - The previous best checkpoint work_dirs/mamba_fscil/cub_resnet18_mambafscil/best_acc_epoch_13.pth was removed
+2024-07-17 15:38:10,311 - mmcls - INFO - Now best checkpoint is saved as best_acc_epoch_14.pth.
+2024-07-17 15:38:10,311 - mmcls - INFO - Best acc is 80.3422 at 14 epoch.
+2024-07-17 15:38:10,311 - mmcls - INFO - Epoch(val) [14][6]	acc: 80.3422
+2024-07-17 15:38:21,275 - mmcls - INFO - Epoch [15][10/24]	lr: 4.963e-02, eta: 0:01:39, time: 1.058, data_time: 0.296, memory: 1852, loss: 0.7881, top-1: 87.2852, top-5: 96.7188, norm_input_base: 146.7437, norm_input_novel: 0.0000, norm_main_base: 915.8544, norm_main_novel: 0.0000, norm_residual_base: 135.1558, norm_residual_novel: 0.0000, norm_dts_base: 73.4831, norm_dts_novel: 0.0000, norm_Bs_base: 72.5885, norm_Bs_novel: 0.0000, norm_Cs_base: 73.8359, norm_Cs_novel: 0.0000
+2024-07-17 15:38:28,272 - mmcls - INFO - Epoch [15][20/24]	lr: 4.531e-02, eta: 0:01:31, time: 0.697, data_time: 0.038, memory: 1852, loss: 0.7753, top-1: 87.6562, top-5: 96.3477, norm_input_base: 145.3213, norm_input_novel: 0.0000, norm_main_base: 911.4784, norm_main_novel: 0.0000, norm_residual_base: 134.0731, norm_residual_novel: 0.0000, norm_dts_base: 72.8144, norm_dts_novel: 0.0000, norm_Bs_base: 71.8219, norm_Bs_novel: 0.0000, norm_Cs_base: 73.2296, norm_Cs_novel: 0.0000
+2024-07-17 15:38:30,831 - mmcls - INFO - Saving checkpoint at 15 epochs
+2024-07-17 15:38:34,344 - mmcls - INFO - Dist Eval Hook : There are 2864 samples in total.
+2024-07-17 15:38:34,345 - mmcls - INFO - Epoch(val) [15][6]	acc: 80.0978
+2024-07-17 15:38:45,348 - mmcls - INFO - Epoch [16][10/24]	lr: 3.974e-02, eta: 0:01:21, time: 1.073, data_time: 0.319, memory: 1852, loss: 0.7668, top-1: 87.7539, top-5: 96.4453, norm_input_base: 144.3049, norm_input_novel: 0.0000, norm_main_base: 924.4106, norm_main_novel: 0.0000, norm_residual_base: 132.8415, norm_residual_novel: 0.0000, norm_dts_base: 71.9778, norm_dts_novel: 0.0000, norm_Bs_base: 70.9903, norm_Bs_novel: 0.0000, norm_Cs_base: 72.3109, norm_Cs_novel: 0.0000
+2024-07-17 15:38:52,360 - mmcls - INFO - Epoch [16][20/24]	lr: 3.614e-02, eta: 0:01:13, time: 0.698, data_time: 0.028, memory: 1852, loss: 0.7384, top-1: 87.8320, top-5: 96.5625, norm_input_base: 144.1003, norm_input_novel: 0.0000, norm_main_base: 925.8280, norm_main_novel: 0.0000, norm_residual_base: 132.8047, norm_residual_novel: 0.0000, norm_dts_base: 71.2375, norm_dts_novel: 0.0000, norm_Bs_base: 70.4183, norm_Bs_novel: 0.0000, norm_Cs_base: 71.6287, norm_Cs_novel: 0.0000
+2024-07-17 15:38:54,751 - mmcls - INFO - Saving checkpoint at 16 epochs
+2024-07-17 15:38:58,332 - mmcls - INFO - Dist Eval Hook : There are 2864 samples in total.
+2024-07-17 15:38:58,348 - mmcls - INFO - The previous best checkpoint work_dirs/mamba_fscil/cub_resnet18_mambafscil/best_acc_epoch_14.pth was removed
+2024-07-17 15:38:58,644 - mmcls - INFO - Now best checkpoint is saved as best_acc_epoch_16.pth.
+2024-07-17 15:38:58,644 - mmcls - INFO - Best acc is 80.6913 at 16 epoch.
+2024-07-17 15:38:58,644 - mmcls - INFO - Epoch(val) [16][6]	acc: 80.6913
+2024-07-17 15:39:09,227 - mmcls - INFO - Epoch [17][10/24]	lr: 3.166e-02, eta: 0:01:03, time: 1.016, data_time: 0.332, memory: 1852, loss: 0.7150, top-1: 88.3594, top-5: 97.0898, norm_input_base: 143.2573, norm_input_novel: 0.0000, norm_main_base: 930.5634, norm_main_novel: 0.0000, norm_residual_base: 131.8109, norm_residual_novel: 0.0000, norm_dts_base: 70.6581, norm_dts_novel: 0.0000, norm_Bs_base: 69.7813, norm_Bs_novel: 0.0000, norm_Cs_base: 71.0016, norm_Cs_novel: 0.0000
+2024-07-17 15:39:16,003 - mmcls - INFO - Epoch [17][20/24]	lr: 2.888e-02, eta: 0:00:56, time: 0.691, data_time: 0.043, memory: 1852, loss: 0.7374, top-1: 87.7734, top-5: 96.3281, norm_input_base: 143.3301, norm_input_novel: 0.0000, norm_main_base: 934.0018, norm_main_novel: 0.0000, norm_residual_base: 131.9760, norm_residual_novel: 0.0000, norm_dts_base: 70.3517, norm_dts_novel: 0.0000, norm_Bs_base: 69.3969, norm_Bs_novel: 0.0000, norm_Cs_base: 70.7044, norm_Cs_novel: 0.0000
+2024-07-17 15:39:18,525 - mmcls - INFO - Saving checkpoint at 17 epochs
+2024-07-17 15:39:22,001 - mmcls - INFO - Dist Eval Hook : There are 2864 samples in total.
+2024-07-17 15:39:22,002 - mmcls - INFO - Epoch(val) [17][6]	acc: 80.4818
+2024-07-17 15:39:33,172 - mmcls - INFO - Epoch [18][10/24]	lr: 2.559e-02, eta: 0:00:45, time: 1.083, data_time: 0.275, memory: 1852, loss: 0.7228, top-1: 88.0859, top-5: 96.6406, norm_input_base: 142.2504, norm_input_novel: 0.0000, norm_main_base: 939.3722, norm_main_novel: 0.0000, norm_residual_base: 131.0062, norm_residual_novel: 0.0000, norm_dts_base: 69.6367, norm_dts_novel: 0.0000, norm_Bs_base: 68.7819, norm_Bs_novel: 0.0000, norm_Cs_base: 70.0140, norm_Cs_novel: 0.0000
+2024-07-17 15:39:40,366 - mmcls - INFO - Epoch [18][20/24]	lr: 2.369e-02, eta: 0:00:38, time: 0.723, data_time: 0.034, memory: 1852, loss: 0.7144, top-1: 87.8320, top-5: 96.7773, norm_input_base: 141.9814, norm_input_novel: 0.0000, norm_main_base: 938.4121, norm_main_novel: 0.0000, norm_residual_base: 130.7946, norm_residual_novel: 0.0000, norm_dts_base: 69.3716, norm_dts_novel: 0.0000, norm_Bs_base: 68.4591, norm_Bs_novel: 0.0000, norm_Cs_base: 69.7412, norm_Cs_novel: 0.0000
+2024-07-17 15:39:42,563 - mmcls - INFO - Saving checkpoint at 18 epochs
+2024-07-17 15:39:46,113 - mmcls - INFO - Dist Eval Hook : There are 2864 samples in total.
+2024-07-17 15:39:46,130 - mmcls - INFO - The previous best checkpoint work_dirs/mamba_fscil/cub_resnet18_mambafscil/best_acc_epoch_16.pth was removed
+2024-07-17 15:39:46,546 - mmcls - INFO - Now best checkpoint is saved as best_acc_epoch_18.pth.
+2024-07-17 15:39:46,547 - mmcls - INFO - Best acc is 80.9008 at 18 epoch.
+2024-07-17 15:39:46,547 - mmcls - INFO - Epoch(val) [18][6]	acc: 80.9008
+2024-07-17 15:39:56,863 - mmcls - INFO - Epoch [19][10/24]	lr: 2.169e-02, eta: 0:00:28, time: 0.988, data_time: 0.279, memory: 1852, loss: 0.7058, top-1: 88.1641, top-5: 96.8750, norm_input_base: 141.8919, norm_input_novel: 0.0000, norm_main_base: 946.1646, norm_main_novel: 0.0000, norm_residual_base: 130.5934, norm_residual_novel: 0.0000, norm_dts_base: 69.0315, norm_dts_novel: 0.0000, norm_Bs_base: 68.1110, norm_Bs_novel: 0.0000, norm_Cs_base: 69.2939, norm_Cs_novel: 0.0000
+2024-07-17 15:40:04,063 - mmcls - INFO - Epoch [19][20/24]	lr: 2.072e-02, eta: 0:00:20, time: 0.724, data_time: 0.044, memory: 1852, loss: 0.7095, top-1: 88.3203, top-5: 96.7188, norm_input_base: 141.4142, norm_input_novel: 0.0000, norm_main_base: 949.5503, norm_main_novel: 0.0000, norm_residual_base: 130.1996, norm_residual_novel: 0.0000, norm_dts_base: 68.5754, norm_dts_novel: 0.0000, norm_Bs_base: 67.7068, norm_Bs_novel: 0.0000, norm_Cs_base: 68.9460, norm_Cs_novel: 0.0000
+2024-07-17 15:40:06,669 - mmcls - INFO - Saving checkpoint at 19 epochs
+2024-07-17 15:40:10,375 - mmcls - INFO - Dist Eval Hook : There are 2864 samples in total.
+2024-07-17 15:40:10,375 - mmcls - INFO - Epoch(val) [19][6]	acc: 80.4469
+2024-07-17 15:40:21,651 - mmcls - INFO - Epoch [20][10/24]	lr: 2.005e-02, eta: 0:00:10, time: 1.100, data_time: 0.320, memory: 1852, loss: 0.6865, top-1: 88.8281, top-5: 96.8164, norm_input_base: 140.9518, norm_input_novel: 0.0000, norm_main_base: 945.6974, norm_main_novel: 0.0000, norm_residual_base: 129.8135, norm_residual_novel: 0.0000, norm_dts_base: 68.2903, norm_dts_novel: 0.0000, norm_Bs_base: 67.3310, norm_Bs_novel: 0.0000, norm_Cs_base: 68.5472, norm_Cs_novel: 0.0000
+2024-07-17 15:40:28,616 - mmcls - INFO - Epoch [20][20/24]	lr: 2.000e-03, eta: 0:00:02, time: 0.691, data_time: 0.028, memory: 1852, loss: 0.7060, top-1: 88.3398, top-5: 96.9336, norm_input_base: 139.7659, norm_input_novel: 0.0000, norm_main_base: 949.1942, norm_main_novel: 0.0000, norm_residual_base: 128.7297, norm_residual_novel: 0.0000, norm_dts_base: 67.7829, norm_dts_novel: 0.0000, norm_Bs_base: 66.9007, norm_Bs_novel: 0.0000, norm_Cs_base: 68.1855, norm_Cs_novel: 0.0000
+2024-07-17 15:40:31,087 - mmcls - INFO - Saving checkpoint at 20 epochs
+2024-07-17 15:41:22,440 - mmcls - INFO - Dist Eval Hook : There are 2864 samples in total.
+2024-07-17 15:41:22,440 - mmcls - INFO - Epoch(val) [20][6]	acc: 80.8310
